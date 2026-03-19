@@ -1,0 +1,184 @@
+# ==============================================================================
+# Rust Build Artifacts
+# ==============================================================================
+# Compiled files and build output
+/target/
+**/target/
+
+# Backup files created by rustfmt
+**/*.rs.bk
+
+# Debug symbols (Windows)
+*.pdb
+
+# Cargo.lock should be ignored for libraries (but committed for binaries)
+# Since RecLite is a library, we ignore it
+Cargo.lock
+
+# ==============================================================================
+# IDE and Editor Files
+# ==============================================================================
+# Kiro IDE
+.kiro/
+
+# JetBrains IDEs (IntelliJ IDEA, CLion, RustRover)
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Vim
+*.swp
+*.swo
+*.swn
+*~
+.*.sw[a-z]
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+*.sublime-workspace
+
+# ==============================================================================
+# Operating System Files
+# ==============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*
+
+# ==============================================================================
+# Testing and Development
+# ==============================================================================
+# Test database files
+*.db
+*.redb
+*.sqlite
+*.sqlite3
+
+# Test output
+test-output/
+tmp/
+temp/
+
+# Coverage reports
+tarpaulin-report.html
+cobertura.xml
+lcov.info
+coverage/
+
+# ==============================================================================
+# Python Bindings (PyO3)
+# ==============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+*.dylib
+*.dll
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# PyCharm
+.idea/
+
+# ==============================================================================
+# Benchmarking
+# ==============================================================================
+# Criterion.rs output
+/target/criterion/
+criterion-reports/
+
+# Flamegraph output
+flamegraph.svg
+perf.data
+perf.data.old
+
+# ==============================================================================
+# Documentation
+# ==============================================================================
+# Generated documentation
+/target/doc/
+docs/_build/
+
+# ==============================================================================
+# CI/CD
+# ==============================================================================
+# GitHub Actions artifacts (if any local testing)
+.github/workflows/artifacts/
+
+# ==============================================================================
+# Security and Secrets
+# ==============================================================================
+# Never commit secrets or credentials
+*.pem
+*.key
+*.cert
+.env
+.env.local
+secrets.toml
+
+# ==============================================================================
+# Miscellaneous
+# ==============================================================================
+# Logs
+*.log
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Temporary files
+*.tmp
+*.temp
