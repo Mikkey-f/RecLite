@@ -42,7 +42,7 @@ impl RecEngine {
     /// # Example
     /// ```rust,no_run
     /// use reclite::RecEngine;
-    /// 
+    ///
     /// let engine = RecEngine::open("recommendations.db")?;
     /// # Ok::<(), reclite::RecError>(())
     /// ```
@@ -194,7 +194,7 @@ impl Drop for RecEngine {
 #[cfg(test)]
 mod tests {
     // Basic compilation tests - actual functionality will be tested in later tasks
-    
+
     #[test]
     fn test_engine_struct_exists() {
         // This test just ensures the struct compiles

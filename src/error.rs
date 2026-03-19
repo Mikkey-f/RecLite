@@ -38,7 +38,11 @@ impl fmt::Display for RecError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             RecError::DimensionMismatch { expected, actual } => {
-                write!(f, "Dimension mismatch: expected {}, got {}", expected, actual)
+                write!(
+                    f,
+                    "Dimension mismatch: expected {}, got {}",
+                    expected, actual
+                )
             }
             RecError::NotFound(id) => {
                 write!(f, "Item not found: {}", id)
@@ -117,8 +121,14 @@ mod tests {
 
     #[test]
     fn test_dimension_mismatch_display() {
-        let error = RecError::DimensionMismatch { expected: 128, actual: 64 };
-        assert_eq!(error.to_string(), "Dimension mismatch: expected 128, got 64");
+        let error = RecError::DimensionMismatch {
+            expected: 128,
+            actual: 64,
+        };
+        assert_eq!(
+            error.to_string(),
+            "Dimension mismatch: expected 128, got 64"
+        );
     }
 
     #[test]
@@ -131,7 +141,7 @@ mod tests {
     fn test_io_error_conversion() {
         let io_err = io::Error::new(io::ErrorKind::NotFound, "file not found");
         let rec_err = RecError::from(io_err);
-        
+
         match rec_err {
             RecError::IoError(_) => (),
             _ => panic!("Expected IoError variant"),
@@ -153,13 +163,16 @@ mod tests {
     #[test]
     fn test_error_source() {
         use std::error::Error;
-        
+
         let io_err = io::Error::new(io::ErrorKind::PermissionDenied, "access denied");
         let rec_err = RecError::from(io_err);
-        
+
         assert!(rec_err.source().is_some());
-        
-        let dimension_err = RecError::DimensionMismatch { expected: 10, actual: 5 };
+
+        let dimension_err = RecError::DimensionMismatch {
+            expected: 10,
+            actual: 5,
+        };
         assert!(dimension_err.source().is_none());
     }
 }

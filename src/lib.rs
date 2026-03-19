@@ -39,13 +39,13 @@
 //! ```
 
 // Core modules
-pub mod error;
-pub mod storage;
-pub mod id_mapper;
-pub mod vector_index;
-pub mod tombstone;
 pub mod backend;
 pub mod engine;
+pub mod error;
+pub mod id_mapper;
+pub mod storage;
+pub mod tombstone;
+pub mod vector_index;
 
 // Python bindings (optional)
 // TODO: Implement Python bindings in future tasks
@@ -61,7 +61,7 @@ pub use error::RecError;
 pub struct SearchResult {
     /// External string identifier for the item
     pub id: String,
-    
+
     /// Cosine similarity score (range: 0.0 to 1.0)
     /// Higher scores indicate greater similarity
     pub score: f32,
@@ -79,13 +79,13 @@ impl SearchResult {
 pub struct RecStats {
     /// Total number of active items (excluding tombstoned)
     pub item_count: u32,
-    
+
     /// Number of deleted (tombstoned) items
     pub tombstone_count: u32,
-    
+
     /// Embedding vector dimension
     pub dimension: usize,
-    
+
     /// Database file size in bytes
     pub file_size: u64,
 }

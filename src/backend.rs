@@ -29,11 +29,16 @@ pub trait SearchBackend: Send + Sync {
     /// Search for top-K most similar vectors
     ///
     /// Returns: Vec<(internal_id, score)> sorted by score descending
-    fn search(&self, query: &[f32], top_k: usize, tombstones: &TombstoneTracker) -> Result<Vec<(u32, f32)>, RecError>;
+    fn search(
+        &self,
+        query: &[f32],
+        top_k: usize,
+        tombstones: &TombstoneTracker,
+    ) -> Result<Vec<(u32, f32)>, RecError>;
 
     /// Get the dimension of vectors in this backend
     fn dimension(&self) -> usize;
-    
+
     /// Get the number of vectors currently stored
     fn len(&self) -> usize;
 
@@ -69,11 +74,12 @@ impl SearchBackend for LinearScanBackend {
         // For linear scan, internal_id must equal current count
         let expected_id = self.index.len() as u32;
         if internal_id != expected_id {
-            return Err(RecError::InvalidInput(
-                format!("Expected internal_id {}, got {}", expected_id, internal_id)
-            ));
+            return Err(RecError::InvalidInput(format!(
+                "Expected internal_id {}, got {}",
+                expected_id, internal_id
+            )));
         }
-        
+
         self.index.push(vector)?;
         Ok(())
     }
@@ -81,7 +87,7 @@ impl SearchBackend for LinearScanBackend {
     fn update_vector(&mut self, internal_id: u32, vector: &[f32]) -> Result<(), RecError> {
         self.index.update(internal_id, vector)
     }
-    
+
     fn len(&self) -> usize {
         self.index.len()
     }
@@ -89,7 +95,12 @@ impl SearchBackend for LinearScanBackend {
     fn dimension(&self) -> usize {
         self.index.dimension()
     }
-    fn search(&self, query: &[f32], top_k: usize, tombstones: &TombstoneTracker) -> Result<Vec<(u32, f32)>, RecError> {
+    fn search(
+        &self,
+        query: &[f32],
+        top_k: usize,
+        tombstones: &TombstoneTracker,
+    ) -> Result<Vec<(u32, f32)>, RecError> {
         if query.len() != self.dimension() {
             return Err(RecError::DimensionMismatch {
                 expected: self.dimension(),
@@ -108,7 +119,7 @@ impl SearchBackend for LinearScanBackend {
             }
 
             let vector = self.index.get(internal_id).unwrap();
-            
+
             // Compute cosine similarity using simsimd
             // For now, use a simple dot product implementation until simsimd API is confirmed
             let score = dot_product(query, vector) / (magnitude(query) * magnitude(vector));
@@ -129,7 +140,7 @@ impl SearchBackend for LinearScanBackend {
             .into_iter()
             .map(|item| (item.internal_id, item.score))
             .collect();
-            
+
         results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
 
         Ok(results)
@@ -179,22 +190,22 @@ mod tests {
     #[test]
     fn test_add_vector() {
         let mut backend = LinearScanBackend::new(2);
-        
+
         let vector1 = vec![0.1, 0.2];
         let vector2 = vec![0.3, 0.4];
-        
+
         backend.add_vector(0, &vector1).unwrap();
         backend.add_vector(1, &vector2).unwrap();
-        
+
         assert_eq!(backend.len(), 2);
     }
 
     #[test]
     fn test_add_vector_wrong_id() {
         let mut backend = LinearScanBackend::new(2);
-        
+
         let vector = vec![0.1, 0.2];
-        
+
         // Should fail because expected ID is 0, not 5
         let result = backend.add_vector(5, &vector);
         assert!(matches!(result, Err(RecError::InvalidInput(_))));
@@ -203,13 +214,13 @@ mod tests {
     #[test]
     fn test_update_vector() {
         let mut backend = LinearScanBackend::new(2);
-        
+
         let original = vec![0.1, 0.2];
         let updated = vec![0.5, 0.6];
-        
+
         backend.add_vector(0, &original).unwrap();
         backend.update_vector(0, &updated).unwrap();
-        
+
         // Verify update worked by checking the underlying index
         assert_eq!(backend.index.get(0), Some([0.5, 0.6].as_slice()));
     }
@@ -218,10 +229,10 @@ mod tests {
     fn test_search_empty_backend() {
         let backend = LinearScanBackend::new(3);
         let tombstones = TombstoneTracker::new();
-        
+
         let query = vec![0.1, 0.2, 0.3];
         let results = backend.search(&query, 5, &tombstones).unwrap();
-        
+
         assert!(results.is_empty());
     }
 
@@ -229,13 +240,13 @@ mod tests {
     fn test_search_single_item() {
         let mut backend = LinearScanBackend::new(3);
         let tombstones = TombstoneTracker::new();
-        
+
         let vector = vec![0.1, 0.2, 0.3];
         backend.add_vector(0, &vector).unwrap();
-        
+
         let query = vec![0.1, 0.2, 0.3]; // Identical vector
         let results = backend.search(&query, 1, &tombstones).unwrap();
-        
+
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].0, 0); // internal_id
         assert!(results[0].1 > 0.99); // score should be very high (near 1.0)
@@ -245,19 +256,19 @@ mod tests {
     fn test_search_with_tombstones() {
         let mut backend = LinearScanBackend::new(2);
         let mut tombstones = TombstoneTracker::new();
-        
+
         let vector1 = vec![1.0, 0.0];
         let vector2 = vec![0.0, 1.0];
-        
+
         backend.add_vector(0, &vector1).unwrap();
         backend.add_vector(1, &vector2).unwrap();
-        
+
         // Mark first vector as deleted
         tombstones.mark_deleted(0);
-        
+
         let query = vec![1.0, 0.0]; // Should match vector1, but it's tombstoned
         let results = backend.search(&query, 2, &tombstones).unwrap();
-        
+
         // Should only return vector2 (internal_id = 1)
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].0, 1);
@@ -267,24 +278,39 @@ mod tests {
     fn test_search_wrong_dimension() {
         let backend = LinearScanBackend::new(3);
         let tombstones = TombstoneTracker::new();
-        
+
         let wrong_query = vec![0.1, 0.2]; // dimension 2, expected 3
         let result = backend.search(&wrong_query, 1, &tombstones);
-        
-        assert!(matches!(result, Err(RecError::DimensionMismatch { expected: 3, actual: 2 })));
+
+        assert!(matches!(
+            result,
+            Err(RecError::DimensionMismatch {
+                expected: 3,
+                actual: 2
+            })
+        ));
     }
 
     #[test]
     fn test_scored_item_ordering() {
-        let item1 = ScoredItem { internal_id: 1, score: 0.5 };
-        let item2 = ScoredItem { internal_id: 2, score: 0.8 };
-        let item3 = ScoredItem { internal_id: 3, score: 0.3 };
-        
+        let item1 = ScoredItem {
+            internal_id: 1,
+            score: 0.5,
+        };
+        let item2 = ScoredItem {
+            internal_id: 2,
+            score: 0.8,
+        };
+        let item3 = ScoredItem {
+            internal_id: 3,
+            score: 0.3,
+        };
+
         let mut heap = BinaryHeap::new();
         heap.push(item1);
         heap.push(item2);
         heap.push(item3);
-        
+
         // BinaryHeap is max-heap, but we want min-heap behavior
         // So the item with lowest score should come out first
         let min_item = heap.pop().unwrap();

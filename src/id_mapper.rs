@@ -10,10 +10,10 @@ use std::sync::atomic::{AtomicU32, Ordering};
 pub struct IDMapper {
     // String → u32 mapping
     string_to_id: HashMap<String, u32>,
-    
+
     // u32 → String mapping
     id_to_string: HashMap<u32, String>,
-    
+
     // Next available internal ID
     next_id: AtomicU32,
 }
@@ -38,10 +38,10 @@ impl IDMapper {
 
         // Allocate new ID atomically
         let internal_id = self.next_id.fetch_add(1, Ordering::SeqCst);
-        
+
         self.string_to_id.insert(id.to_string(), internal_id);
         self.id_to_string.insert(internal_id, id.to_string());
-        
+
         internal_id
     }
 
@@ -58,13 +58,13 @@ impl IDMapper {
     /// Load mappings from storage during initialization
     pub fn load_from_storage(&mut self, mappings: Vec<(String, u32)>) {
         let mut max_id = 0u32;
-        
+
         for (string_id, internal_id) in mappings {
             self.string_to_id.insert(string_id.clone(), internal_id);
             self.id_to_string.insert(internal_id, string_id);
             max_id = max_id.max(internal_id);
         }
-        
+
         // Set next_id to one past the maximum loaded ID
         self.next_id.store(max_id + 1, Ordering::SeqCst);
     }
@@ -77,10 +77,10 @@ mod tests {
     #[test]
     fn test_get_or_allocate_new_id() {
         let mut mapper = IDMapper::new();
-        
+
         let id1 = mapper.get_or_allocate("item1");
         let id2 = mapper.get_or_allocate("item2");
-        
+
         assert_eq!(id1, 0);
         assert_eq!(id2, 1);
         assert_ne!(id1, id2);
@@ -89,31 +89,31 @@ mod tests {
     #[test]
     fn test_get_or_allocate_idempotent() {
         let mut mapper = IDMapper::new();
-        
+
         let id1 = mapper.get_or_allocate("item1");
         let id2 = mapper.get_or_allocate("item1");
-        
+
         assert_eq!(id1, id2);
     }
 
     #[test]
     fn test_round_trip_mapping() {
         let mut mapper = IDMapper::new();
-        
+
         let original_string = "test_item";
         let internal_id = mapper.get_or_allocate(original_string);
         let retrieved_string = mapper.get_string(internal_id).unwrap();
-        
+
         assert_eq!(original_string, retrieved_string);
     }
 
     #[test]
     fn test_get_internal_lookup() {
         let mut mapper = IDMapper::new();
-        
+
         let internal_id = mapper.get_or_allocate("item1");
         let looked_up_id = mapper.get_internal("item1").unwrap();
-        
+
         assert_eq!(internal_id, looked_up_id);
     }
 
@@ -132,24 +132,24 @@ mod tests {
     #[test]
     fn test_load_from_storage() {
         let mut mapper = IDMapper::new();
-        
+
         let mappings = vec![
             ("item1".to_string(), 5),
             ("item2".to_string(), 10),
             ("item3".to_string(), 3),
         ];
-        
+
         mapper.load_from_storage(mappings);
-        
+
         // Verify mappings were loaded
         assert_eq!(mapper.get_internal("item1"), Some(5));
         assert_eq!(mapper.get_internal("item2"), Some(10));
         assert_eq!(mapper.get_internal("item3"), Some(3));
-        
+
         assert_eq!(mapper.get_string(5), Some("item1"));
         assert_eq!(mapper.get_string(10), Some("item2"));
         assert_eq!(mapper.get_string(3), Some("item3"));
-        
+
         // Verify next_id is set correctly (max + 1)
         let new_id = mapper.get_or_allocate("new_item");
         assert_eq!(new_id, 11);
