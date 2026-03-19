@@ -10,7 +10,7 @@ keywords = ["recommendation", "vector", "similarity", "search", "embedded"]
 categories = ["database", "algorithms", "science"]
 
 [dependencies]
-redb = "2.0"
+redb = "2.1"
 simsimd = "4.0"
 bincode = "1.3"
 bitvec = "1.0"
@@ -19,14 +19,3 @@ bitvec = "1.0"
 proptest = "1.4"
 criterion = "0.5"
 tempfile = "3.8"
-
-
-
-[features]
-default = []
-python = ["pyo3"]
-
-[dependencies.pyo3]
-version = "0.20"
-optional = true
-features = ["extension-module"]

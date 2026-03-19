@@ -154,8 +154,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📬 Contact
 
-- Issues: [GitHub Issues](https://github.com/yourusername/reclite/issues)
-- Discussions: [GitHub Discussions](https://github.com/yourusername/reclite/discussions)
+- Issues: [GitHub Issues](https://github.com/Mikkey-f/reclite/issues)
+- Discussions: [GitHub Discussions](https://github.com/Mikkey-f/reclite/discussions)
 
 ---
 

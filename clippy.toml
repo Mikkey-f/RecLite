@@ -15,6 +15,3 @@ array-size-threshold = 512000
 
 # Maximum size of vectors to lint
 vec-box-size-threshold = 4096
-
-# Maximum allowed size for `Err` variant
-result-large-err-threshold = 128

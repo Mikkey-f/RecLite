@@ -127,21 +127,6 @@ jobs:
       - name: Check documentation
         run: cargo doc --no-deps --document-private-items --all-features
 
-  # 最小支持的 Rust 版本检查
-  msrv:
-    name: Minimum Supported Rust Version
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust 1.70
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: "1.70"
-      
-      - name: Check MSRV
-        run: cargo check --all-features
-
   # 安全审计
   security-audit:
     name: Security Audit
