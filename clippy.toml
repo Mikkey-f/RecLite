@@ -1,0 +1,24 @@
+# RecLite Clippy Configuration
+# https://doc.rust-lang.org/clippy/
+
+# Cognitive complexity threshold
+cognitive-complexity-threshold = 30
+
+# Documentation
+# Require documentation for public items
+missing-docs-in-crate-items = true
+
+# Type complexity threshold
+type-complexity-threshold = 250
+
+# Maximum number of single char bindings
+single-char-binding-names-threshold = 4
+
+# Maximum size of arrays to lint
+array-size-threshold = 512000
+
+# Maximum size of vectors to lint
+vec-box-size-threshold = 4096
+
+# Maximum allowed size for `Err` variant
+result-large-err-threshold = 128
