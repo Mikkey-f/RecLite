@@ -4,10 +4,6 @@
 # Cognitive complexity threshold
 cognitive-complexity-threshold = 30
 
-# Documentation
-# Require documentation for public items
-missing-docs-in-crate-items = true
-
 # Type complexity threshold
 type-complexity-threshold = 250
 

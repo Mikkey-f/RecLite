@@ -48,8 +48,9 @@ pub mod backend;
 pub mod engine;
 
 // Python bindings (optional)
-#[cfg(feature = "python")]
-pub mod python;
+// TODO: Implement Python bindings in future tasks
+// #[cfg(feature = "python")]
+// pub mod python;
 
 // Re-export public API
 pub use engine::RecEngine;
