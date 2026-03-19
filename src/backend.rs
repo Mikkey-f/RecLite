@@ -316,4 +316,210 @@ mod tests {
         let min_item = heap.pop().unwrap();
         assert_eq!(min_item.score, 0.3);
     }
+
+    // Property-Based Tests
+    use proptest::prelude::*;
+
+    // Strategy for generating random f32 vectors with values in [-1.0, 1.0]
+    fn vector_strategy(dimension: usize) -> impl Strategy<Value = Vec<f32>> {
+        prop::collection::vec(-1.0f32..1.0f32, dimension)
+    }
+
+    // Strategy for generating a dataset of vectors
+    fn dataset_strategy(
+        dimension: usize,
+        count: usize,
+    ) -> impl Strategy<Value = Vec<Vec<f32>>> {
+        prop::collection::vec(vector_strategy(dimension), count)
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(100))]
+
+        /// **Validates: Requirements 8.2, 8.3**
+        /// Property 6: Search Completeness
+        ///
+        /// For any query vector and top-K value, the search results should include
+        /// only the K most similar non-tombstoned items from the entire dataset,
+        /// sorted by similarity score in descending order.
+        #[test]
+        fn property_search_completeness(
+            dimension in 2usize..10,
+            dataset_size in 5usize..50,
+            top_k in 1usize..10,
+        ) {
+            // Generate random dataset
+            let dataset: Vec<Vec<f32>> = (0..dataset_size)
+                .map(|_| {
+                    (0..dimension)
+                        .map(|_| rand::random::<f32>() * 2.0 - 1.0)
+                        .collect()
+                })
+                .collect();
+
+            // Create backend and add all vectors
+            let mut backend = LinearScanBackend::new(dimension);
+            for (i, vector) in dataset.iter().enumerate() {
+                backend.add_vector(i as u32, vector).unwrap();
+            }
+
+            // Generate random query
+            let query: Vec<f32> = (0..dimension)
+                .map(|_| rand::random::<f32>() * 2.0 - 1.0)
+                .collect();
+
+            // Perform search with no tombstones
+            let tombstones = TombstoneTracker::new();
+            let results = backend.search(&query, top_k, &tombstones).unwrap();
+
+            // Property 1: Results should contain at most K items (or dataset_size if smaller)
+            let expected_count = top_k.min(dataset_size);
+            prop_assert_eq!(results.len(), expected_count);
+
+            // Property 2: Results should be sorted by score descending
+            for i in 1..results.len() {
+                prop_assert!(
+                    results[i - 1].1 >= results[i].1,
+                    "Results not sorted: score[{}]={} < score[{}]={}",
+                    i - 1,
+                    results[i - 1].1,
+                    i,
+                    results[i].1
+                );
+            }
+
+            // Property 3: Verify these are actually the K most similar items
+            // Compute all similarities manually
+            let mut all_scores: Vec<(u32, f32)> = dataset
+                .iter()
+                .enumerate()
+                .map(|(i, vector)| {
+                    let score = dot_product(&query, vector)
+                        / (magnitude(&query) * magnitude(vector));
+                    (i as u32, score)
+                })
+                .collect();
+
+            // Sort by score descending
+            all_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
+
+            // Take top K
+            let expected_top_k: Vec<(u32, f32)> = all_scores.into_iter().take(top_k).collect();
+
+            // Verify results match expected top-K
+            for (i, (result_id, result_score)) in results.iter().enumerate() {
+                let (expected_id, expected_score) = expected_top_k[i];
+                prop_assert_eq!(*result_id, expected_id, "ID mismatch at position {}", i);
+                prop_assert!(
+                    (result_score - expected_score).abs() < 1e-5,
+                    "Score mismatch at position {}: got {}, expected {}",
+                    i,
+                    result_score,
+                    expected_score
+                );
+            }
+        }
+
+        /// **Validates: Requirements 8.6, 10.3**
+        /// Property 7: Tombstone Filtering
+        ///
+        /// For any search query, tombstoned (deleted) items should never appear
+        /// in the search results.
+        #[test]
+        fn property_tombstone_filtering(
+            dimension in 2usize..10,
+            dataset_size in 10usize..50,
+            num_tombstones in 1usize..10,
+            top_k in 5usize..15,
+        ) {
+            // Ensure we have enough items to tombstone
+            let num_tombstones = num_tombstones.min(dataset_size - 1);
+
+            // Generate random dataset
+            let dataset: Vec<Vec<f32>> = (0..dataset_size)
+                .map(|_| {
+                    (0..dimension)
+                        .map(|_| rand::random::<f32>() * 2.0 - 1.0)
+                        .collect()
+                })
+                .collect();
+
+            // Create backend and add all vectors
+            let mut backend = LinearScanBackend::new(dimension);
+            for (i, vector) in dataset.iter().enumerate() {
+                backend.add_vector(i as u32, vector).unwrap();
+            }
+
+            // Create tombstone tracker and mark random items as deleted
+            let mut tombstones = TombstoneTracker::new();
+            let mut tombstoned_ids = std::collections::HashSet::new();
+
+            for _ in 0..num_tombstones {
+                let id = (rand::random::<usize>() % dataset_size) as u32;
+                tombstones.mark_deleted(id);
+                tombstoned_ids.insert(id);
+            }
+
+            // Generate random query
+            let query: Vec<f32> = (0..dimension)
+                .map(|_| rand::random::<f32>() * 2.0 - 1.0)
+                .collect();
+
+            // Perform search with tombstones
+            let results = backend.search(&query, top_k, &tombstones).unwrap();
+
+            // Property 1: No tombstoned items should appear in results
+            for (result_id, _) in &results {
+                prop_assert!(
+                    !tombstoned_ids.contains(result_id),
+                    "Tombstoned item {} appeared in search results",
+                    result_id
+                );
+            }
+
+            // Property 2: Results should only contain non-tombstoned items
+            let active_count = dataset_size - tombstoned_ids.len();
+            let expected_count = top_k.min(active_count);
+            prop_assert_eq!(
+                results.len(),
+                expected_count,
+                "Expected {} results (top_k={}, active_items={}), got {}",
+                expected_count,
+                top_k,
+                active_count,
+                results.len()
+            );
+
+            // Property 3: Verify results are the top-K from non-tombstoned items only
+            let mut all_scores: Vec<(u32, f32)> = dataset
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| !tombstoned_ids.contains(&(*i as u32)))
+                .map(|(i, vector)| {
+                    let score = dot_product(&query, vector)
+                        / (magnitude(&query) * magnitude(vector));
+                    (i as u32, score)
+                })
+                .collect();
+
+            // Sort by score descending
+            all_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
+
+            // Take top K from non-tombstoned items
+            let expected_top_k: Vec<(u32, f32)> = all_scores.into_iter().take(top_k).collect();
+
+            // Verify results match expected top-K
+            for (i, (result_id, result_score)) in results.iter().enumerate() {
+                let (expected_id, expected_score) = expected_top_k[i];
+                prop_assert_eq!(*result_id, expected_id, "ID mismatch at position {}", i);
+                prop_assert!(
+                    (result_score - expected_score).abs() < 1e-5,
+                    "Score mismatch at position {}: got {}, expected {}",
+                    i,
+                    result_score,
+                    expected_score
+                );
+            }
+        }
+    }
 }
